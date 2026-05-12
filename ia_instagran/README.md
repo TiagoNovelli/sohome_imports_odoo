@@ -8,26 +8,50 @@ Treinar Yolo para nossa regra de negócio
 
 Este projeto tem como objetivo treinar modelos de visão computacional para reconhecer produtos do catálogo e identificar cores/tecidos aplicados nos itens.
 
-A estratégia recomendada é dividir o problema em duas etapas:
+A estratégia recomendada é dividir o problema em etapas, porque o catálogo possui muitas configurações: sofá com braço, sem braço, com curva, com almofada, sem almofada, chaise, módulos, tecidos e cores.
 
-1. **Detecção do produto**
-   Identificar onde está o item na imagem: sofá, poltrona, mesa, cadeira, módulo, puff etc.
+Em vez de treinar uma única classe para cada combinação possível, o ideal é separar o reconhecimento em partes:
 
-2. **Classificação de tecido/cor**
-   Depois que o produto for localizado, recortar a região detectada e classificar o tecido/cor: linho bege, veludo cinza, couro caramelo, boucle off white etc.
+1. **Detecção do produto principal**
+   Identificar o item base na imagem: sofá, poltrona, mesa, puff, módulo, chaise etc.
 
-Essa separação evita criar muitas classes combinadas, como `sofa_confort_linho_bege`, `sofa_confort_veludo_cinza`, `poltrona_confort_linho_bege`, etc.
+2. **Detecção dos componentes/configurações**
+   Identificar características visuais do produto: braço esquerdo, braço direito, módulo sem braço, módulo curvo, almofada solta, encosto, chaise, canto, terminal etc.
+
+3. **Classificação de tecido/cor**
+   Depois que o produto ou região for localizado, recortar a área relevante e classificar o tecido/cor: linho bege, veludo cinza, couro caramelo, boucle off white etc.
+
+Essa separação evita criar muitas classes combinadas, como `sofa_com_braco_linho_bege`, `sofa_sem_braco_veludo_cinza`, `modulo_curvo_boucle_offwhite`, etc.
 
 Em vez disso, o sistema trabalha assim:
 
 ```text
 imagem da sala
    ↓
-YOLO detecta o produto
+YOLO detecta o produto principal
    ↓
-recorta a região do produto
+YOLO ou segmentação detecta componentes/configurações
+   ↓
+recorta regiões relevantes
    ↓
 modelo classificador identifica tecido/cor
+   ↓
+sistema combina os resultados
+```
+
+Exemplo de saída esperada:
+
+```json
+{
+  "produto_base": "sofa_modular",
+  "componentes": [
+    "braco_esquerdo",
+    "modulo_sem_braco",
+    "modulo_curvo",
+    "almofada_soltas"
+  ],
+  "tecido": "linho_bege"
+}
 ```
 
 ---
@@ -338,7 +362,7 @@ Quanto maior a variação das imagens, melhor o modelo tende a generalizar.
 
 ## 9. Exemplo de classes recomendadas
 
-### Modelo de detecção
+### Modelo de detecção do produto principal
 
 ```text
 sofa
@@ -347,19 +371,40 @@ mesa_lateral
 mesa_centro
 cadeira
 puff
-modulo_sofa
+sofa_modular
 chaise
 ```
 
-Ou, se o catálogo exigir mais detalhe:
+### Modelo de detecção de componentes/configurações
 
 ```text
-sofa_confort
-poltrona_confort
-sofa_modular
-mesa_lateral_linha_x
-puff_linha_y
+braco_esquerdo
+braco_direito
+sem_braco
+modulo_reto
+modulo_curvo
+chaise_esquerda
+chaise_direita
+canto
+terminal
+almofada_soltas
+almofada_fixa
+encosto
+base
 ```
+
+Também é possível usar uma única detecção mais detalhada, por exemplo:
+
+```text
+sofa_com_braco
+sofa_sem_braco
+sofa_com_curva
+sofa_com_chaise
+modulo_reto_sem_braco
+modulo_curvo
+```
+
+Mas, quanto mais detalhada for a classe, mais imagens serão necessárias para cada variação.
 
 ### Modelo de tecido/cor
 
@@ -381,11 +426,11 @@ suede_marrom
 Evite criar classes como:
 
 ```text
-sofa_confort_linho_bege
-sofa_confort_veludo_cinza
-sofa_confort_couro_caramelo
-poltrona_confort_linho_bege
-poltrona_confort_veludo_cinza
+sofa_com_braco_linho_bege
+sofa_com_braco_veludo_cinza
+sofa_sem_braco_linho_bege
+sofa_curvo_boucle_offwhite
+sofa_com_chaise_couro_caramelo
 ```
 
 Isso aumenta muito o número de classes e exige muitas imagens para cada combinação.
@@ -393,11 +438,32 @@ Isso aumenta muito o número de classes e exige muitas imagens para cada combina
 Melhor separar:
 
 ```text
-produto = sofa_confort
+produto_base = sofa_modular
+componentes = braco_esquerdo + modulo_curvo + chaise_direita
 tecido = linho_bege
 ```
 
 Assim, o sistema fica mais flexível e escalável.
+
+### Exemplo prático
+
+Em vez de tentar ensinar ao modelo uma classe única chamada:
+
+```text
+sofa_modular_com_braco_esquerdo_modulo_curvo_chaise_direita_linho_bege
+```
+
+O sistema pode aprender partes separadas:
+
+```text
+produto_base: sofa_modular
+componente_1: braco_esquerdo
+componente_2: modulo_curvo
+componente_3: chaise_direita
+tecido: linho_bege
+```
+
+Depois, uma regra de negócio combina esses resultados e consulta o catálogo/Odoo para encontrar o produto correspondente.
 
 ---
 
