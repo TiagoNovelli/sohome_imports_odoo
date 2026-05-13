@@ -4,9 +4,44 @@ https://github.com/instaloader/instaloader
 
 Treinar Yolo para nossa regra de negócio
 
-# Treinamento YOLO para Catálogo de Produtos e Tecidos
+# Furniture Vision AI — Catálogo Inteligente Sohome
 
-Este projeto tem como objetivo treinar modelos de visão computacional para reconhecer produtos do catálogo e identificar cores/tecidos aplicados nos itens.
+Este projeto tem como objetivo criar uma estrutura de visão computacional especializada em móveis de alto padrão utilizando YOLOv8, segmentação e fine tuning de modelos pré-treinados de furniture detection.
+
+O sistema será capaz de:
+
+* detectar móveis em ambientes
+* identificar módulos/configurações de sofás
+* reconhecer componentes visuais
+* identificar tecidos e cores
+* realizar busca visual no catálogo
+* integrar os resultados ao Odoo
+* auxiliar representantes comerciais
+* alimentar orçamentos automaticamente
+
+O projeto utiliza como ponto de partida o modelo:
+
+```text
+MaherMohsen/furniture-yolov8
+```
+
+Disponível em:
+
+[https://huggingface.co/MaherMohsen/furniture-yolov8](https://huggingface.co/MaherMohsen/furniture-yolov8)
+
+Esse modelo já possui conhecimento especializado em:
+
+* furniture detection
+* furniture segmentation
+* ambientes internos
+* sofás
+* cadeiras
+* mesas
+* composição de salas
+* interior design
+* e-commerce de mobiliário
+
+A estratégia é utilizar esse modelo como base e realizar fine tuning com o catálogo próprio da Sohome.
 
 A estratégia recomendada é dividir o problema em etapas, porque o catálogo possui muitas configurações: sofá com braço, sem braço, com curva, com almofada, sem almofada, chaise, módulos, tecidos e cores.
 
@@ -56,7 +91,43 @@ Exemplo de saída esperada:
 
 ---
 
-## 1. Instalação das dependências
+## 1. Arquitetura Geral
+
+```text
+Furniture YOLO pré-treinado
+        ↓
+Fine tuning com catálogo Sohome
+        ↓
+Detecção de módulos/componentes
+        ↓
+Classificação de tecido/cor
+        ↓
+Integração com Odoo
+```
+
+---
+
+## 2. Por que usar um modelo furniture pré-treinado?
+
+Treinar um modelo do zero exigiria milhares de imagens.
+
+O modelo `MaherMohsen/furniture-yolov8` já entende:
+
+* geometria de móveis
+* ambientes internos
+* composição de salas
+* proporções de mobiliário
+* oclusões
+* segmentação de objetos
+* cenários de decoração
+
+Isso reduz bastante a quantidade de imagens necessárias para o fine tuning.
+
+Em vez de ensinar o modelo a entender o conceito de sofá do zero, o projeto apenas especializa o conhecimento para o catálogo Sohome.
+
+---
+
+## 3. Instalação das dependências
 
 Instale as bibliotecas necessárias:
 
@@ -75,13 +146,13 @@ Ou em Python:
 ```python
 from ultralytics import YOLO
 
-model = YOLO("yolov8n.pt")
+model = YOLO("furniture-yolov8.pt")
 print(model)
 ```
 
 ---
 
-## 2. Modelo inicial de detecção
+## 4. Modelo inicial de detecção
 
 Exemplo básico usando um modelo pré-treinado YOLOv8:
 
@@ -111,7 +182,7 @@ Esse modelo identifica objetos genéricos, como pessoa, cadeira, sofá, mesa etc
 
 ---
 
-## 3. Treinando o modelo para detectar produtos do catálogo
+## 5. Fine Tuning do Modelo Furniture
 
 ### 3.1 Estrutura do dataset
 
@@ -221,8 +292,8 @@ Arquivo exemplo: `train_detect.py`
 ```python
 from ultralytics import YOLO
 
-# Carrega modelo base pré-treinado
-model = YOLO("yolov8n.pt")
+# Carrega modelo furniture pré-treinado
+model = YOLO("furniture-yolov8.pt")
 
 # Treina com o dataset próprio
 results = model.train(
@@ -241,7 +312,7 @@ runs/detect/train/weights/best.pt
 
 ---
 
-## 6. Usando o modelo treinado
+## 6. Inferência e testes
 
 Arquivo exemplo: `predict_detect.py`
 
@@ -269,9 +340,45 @@ cv2.destroyAllWindows()
 
 ---
 
-## 7. Classificação de tecido e cor
+## 7. Detecção de módulos e componentes
 
-A identificação de tecido/cor deve ser tratada como um segundo modelo.
+O diferencial do projeto é que ele não detecta apenas “sofás”.
+
+O objetivo é detectar componentes/configurações dos produtos.
+
+Exemplo:
+
+```json
+{
+  "produto_base": "sofa_modular",
+  "componentes": [
+    "braco_esquerdo",
+    "modulo_curvo",
+    "chaise_direita"
+  ]
+}
+```
+
+Isso permite reconhecer diferentes composições do catálogo.
+
+Exemplos de componentes:
+
+```text
+braco_esquerdo
+braco_direito
+modulo_reto
+modulo_curvo
+chaise
+terminal
+sem_braco
+almofada_solta
+almofada_fixa
+encosto
+```
+
+---
+
+## 8. Classificação de tecido e cor
 
 A ideia é:
 
@@ -336,7 +443,7 @@ runs/classify/train/weights/best.pt
 
 ---
 
-## 8. Quantidade recomendada de imagens
+## 9. Quantidade recomendada de imagens
 
 Para começar com boa qualidade:
 
@@ -360,7 +467,7 @@ Quanto maior a variação das imagens, melhor o modelo tende a generalizar.
 
 ---
 
-## 9. Exemplo de classes recomendadas
+## 10. Exemplo de classes recomendadas
 
 ### Modelo de detecção do produto principal
 
@@ -421,7 +528,7 @@ suede_marrom
 
 ---
 
-## 10. Por que não criar uma classe para cada combinação?
+## 11. Por que não criar uma classe para cada combinação?
 
 Evite criar classes como:
 
@@ -467,7 +574,7 @@ Depois, uma regra de negócio combina esses resultados e consulta o catálogo/Od
 
 ---
 
-## 11. Segmentação: quando usar
+## 12. Segmentação: quando usar
 
 A detecção comum usa caixas retangulares em volta dos objetos.
 
@@ -503,7 +610,7 @@ model.train(
 
 ---
 
-## 12. Estrutura sugerida do projeto
+## 13. Estrutura sugerida do projeto
 
 ```text
 visao_catalogo_sohome/
@@ -545,7 +652,7 @@ visao_catalogo_sohome/
 
 ---
 
-## 13. Arquivo `requirements.txt`
+## 14. Arquivo `requirements.txt`
 
 ```text
 ultralytics
@@ -560,7 +667,7 @@ pip install -r requirements.txt
 
 ---
 
-## 14. Próximos passos recomendados
+## 15. Próximos passos recomendados
 
 1. Definir quais produtos serão detectados
 2. Criar uma lista inicial de classes
@@ -574,7 +681,7 @@ pip install -r requirements.txt
 
 ---
 
-## 15. Possível integração futura com Odoo
+## 16. Possível integração futura com Odoo
 
 Depois que os modelos estiverem funcionando, o resultado pode ser integrado ao Odoo.
 
@@ -600,7 +707,7 @@ Com isso, seria possível:
 
 ---
 
-## 16. Observação importante
+## 17. Observação importante
 
 O modelo só aprende bem aquilo que aparece bem representado no dataset.
 
