@@ -1,6 +1,10 @@
 # Jupyter
 .ipynb_checkpoints/
 
+# Data - arquivos grandes gerados, não versionar
+*.pkl
+*.db
+
 # Python
 __pycache__/
 *.pyc
